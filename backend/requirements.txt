@@ -1,0 +1,15 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.17
+pydantic==2.9.2
+pydantic-settings==2.6.1
+PyMuPDF==1.24.14
+pytesseract==0.3.13
+pdf2image==1.17.0
+openai==1.57.4
+pinecone==5.4.2
+supabase==2.10.0
+PyJWT[crypto]==2.10.1
+python-dotenv==1.0.1
+tiktoken==0.8.0
+httpx==0.27.2
