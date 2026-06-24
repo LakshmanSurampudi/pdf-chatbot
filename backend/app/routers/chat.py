@@ -25,11 +25,12 @@ def _build_context(matches: list[dict]) -> tuple[str, list[dict]]:
     sources = []
     for match in matches:
         metadata = match["metadata"]
-        context_parts.append(f"[Page {metadata['page']}]\n{metadata['text']}")
+        page = int(metadata["page"])
+        context_parts.append(f"[Page {page}]\n{metadata['text']}")
         sources.append(
             {
                 "document_id": metadata["document_id"],
-                "page": metadata["page"],
+                "page": page,
                 "excerpt": metadata["text"][:500],
             }
         )
@@ -40,6 +41,8 @@ def _build_context(matches: list[dict]) -> tuple[str, list[dict]]:
 async def chat(request: ChatRequest, user_id: str = Depends(get_current_user_id)):
     if not request.document_ids:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Select at least one document")
+    if not request.question.strip():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Question cannot be empty")
 
     query_embedding = embed_text(request.question)
     matches = pinecone_client.query_chunks(

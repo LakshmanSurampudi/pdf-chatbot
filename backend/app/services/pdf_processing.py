@@ -12,7 +12,10 @@ _encoder = tiktoken.get_encoding("cl100k_base")
 
 def extract_pages(pdf_bytes: bytes) -> list[str]:
     """Return text per page, falling back to OCR for pages with no extractable text."""
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except Exception:
+        return []
     pages: list[str] = []
     ocr_needed: list[int] = []
 
@@ -25,9 +28,12 @@ def extract_pages(pdf_bytes: bytes) -> list[str]:
     doc.close()
 
     if ocr_needed:
-        images = convert_from_bytes(pdf_bytes)
-        for page_number in ocr_needed:
-            pages[page_number] = image_to_string(images[page_number]).strip()
+        try:
+            images = convert_from_bytes(pdf_bytes)
+            for page_number in ocr_needed:
+                pages[page_number] = image_to_string(images[page_number]).strip()
+        except Exception:
+            pass
 
     return pages
 

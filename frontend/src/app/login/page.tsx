@@ -35,7 +35,7 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-4 rounded-lg bg-white p-8 shadow"
       >
-        <h1 className="text-xl font-semibold">
+        <h1 className="text-xl font-semibold text-gray-900">
           {mode === "login" ? "Log in" : "Sign up"}
         </h1>
         <input
@@ -44,7 +44,7 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded border px-3 py-2"
+          className="w-full rounded border px-3 py-2 text-gray-900 placeholder-gray-400"
         />
         <input
           type="password"
@@ -52,7 +52,7 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded border px-3 py-2"
+          className="w-full rounded border px-3 py-2 text-gray-900 placeholder-gray-400"
         />
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button

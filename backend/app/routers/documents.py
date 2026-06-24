@@ -75,5 +75,11 @@ def list_documents(user_id: str = Depends(get_current_user_id)):
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(document_id: str, user_id: str = Depends(get_current_user_id)):
-    pinecone_client.delete_document(user_id, document_id)
-    supabase.table("documents").delete().eq("id", document_id).eq("user_id", user_id).execute()
+    try:
+        pinecone_client.delete_document(user_id, document_id)
+    except Exception:
+        pass
+    try:
+        supabase.table("documents").delete().eq("id", document_id).eq("user_id", user_id).execute()
+    except Exception:
+        pass

@@ -7,7 +7,6 @@ class Settings(BaseSettings):
     pinecone_index_name: str = "pdf-chatbot"
 
     supabase_url: str
-    supabase_jwt_secret: str
     supabase_service_role_key: str
 
     embedding_model: str = "text-embedding-3-small"
