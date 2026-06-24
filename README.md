@@ -23,6 +23,87 @@ Next.js (Vercel)
   for login/signup, a document sidebar for upload/selection, and a chat panel
   with streaming responses and an expandable source panel per answer.
 
+## Design Decisions
+
+### Chunking strategy
+
+Text is extracted per page (`backend/app/services/pdf_processing.py`) using
+PyMuPDF, with a Tesseract OCR fallback for pages that have no extractable
+text (scanned/image-only pages). Each page is then split independently into
+overlapping chunks by token count (`tiktoken`, `cl100k_base` encoding):
+
+- **Chunk size**: 500 tokens (`CHUNK_TOKENS`)
+- **Overlap**: 50 tokens (`CHUNK_OVERLAP_TOKENS`)
+
+Chunking is done per page rather than across page boundaries so every chunk
+has one unambiguous source page, which is what makes page-level citation
+possible. The overlap means a sentence split across two chunks still has a
+good chance of appearing whole in at least one of them, which improves
+recall for nearby-boundary queries at the cost of slightly more storage and
+embedding calls.
+
+### Embedding model choice
+
+Both chunks (at upload) and questions (at query time) are embedded with
+`text-embedding-3-small` (1536 dimensions). It was chosen over
+`text-embedding-3-large` or the older `text-embedding-ada-002` as the best
+fit for this use case: it's materially cheaper and lower-latency than the
+`-large` variant while still outperforming `ada-002` on retrieval quality,
+which matters more here than squeezing out the last bit of accuracy given
+the chunk sizes and corpus sizes involved. Using the same model for both
+documents and queries is required for the cosine similarity comparison in
+retrieval to be meaningful.
+
+### Retrieval approach
+
+Embeddings are stored in Pinecone (cosine similarity, serverless index),
+namespaced per `user_id` — this is the multi-tenancy boundary, so one
+user's vectors are never visible to another's queries even though they
+share an index. Each vector carries `document_id` and `page` as metadata.
+
+At query time (`backend/app/routers/chat.py`):
+
+1. The question is embedded once.
+2. Pinecone is queried for the top **6** nearest chunks (`RETRIEVAL_TOP_K`),
+   filtered to only the documents the user has selected in the UI
+   (`document_id $in [...]`) — so retrieval is scoped to whatever subset of
+   their library they're currently chatting against, not their whole
+   account.
+3. Matched chunks become both the LLM context and the "sources" returned to
+   the client (page number + a 500-character excerpt) for citation in the
+   UI.
+
+### Prompt design
+
+The system prompt is fixed and deliberately narrow: answer only from the
+provided context, say "I don't know" if the answer isn't there, stay
+concise. This is the main lever against hallucination, since the model is
+explicitly told not to fall back on outside knowledge.
+
+Each retrieved chunk is tagged with `[Page N]` and joined with `---`
+separators before being inserted into the prompt, so page provenance is
+visible to the model, not just attached afterward in the API response.
+The full prior conversation for the session is replayed as alternating
+user/assistant turns ahead of the current question (no summarization), so
+the model has multi-turn memory. The current turn is formatted as:
+
+```
+Context:
+[Page 1]
+<chunk text>
+
+---
+
+[Page 2]
+<chunk text>
+
+Question: <user's question>
+```
+
+Sources are streamed to the client as a separate SSE event *before* the
+model starts generating, so the UI can render citations immediately rather
+than waiting for the full streamed answer.
+
 ## Setup
 
 ### 1. Supabase
