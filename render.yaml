@@ -2,7 +2,6 @@ services:
   - type: web
     name: pdf-chatbot-backend
     runtime: docker
-    rootDir: backend
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
